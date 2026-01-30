@@ -1,0 +1,218 @@
+{
+  "date": "2026-01-26",
+  "market_analysis": {
+    "market_trend": "震荡",
+    "valuation_level": "低估",
+    "risk_level": "中",
+    "key_observations": [
+      "上证指数-0.09%",
+      "平均PE百分位0.7%"
+    ],
+    "operation_suggestion": "根据估值水平适度配置",
+    "max_position_ratio": 0.8,
+    "sectors_to_watch": [],
+    "risk_warnings": [
+      "市场有波动风险，请谨慎操作"
+    ]
+  },
+  "portfolio_analysis": {
+    "overall_status": "健康",
+    "issues": [],
+    "recommendations": []
+  },
+  "suggestions": {
+    "buy": [],
+    "sell": [],
+    "hold": [],
+    "watch": [
+      {
+        "fund_code": "000961",
+        "fund_name": "天弘沪深300ETF联接A",
+        "signal": "观望",
+        "confidence": 2,
+        "suggested_amount": null,
+        "suggested_ratio": null,
+        "reasons": [
+          "综合评分61.0分，未达到70分买入标准"
+        ],
+        "risk_warnings": [],
+        "score": {
+          "fund_code": "000961",
+          "fund_name": "天弘沪深300ETF联接A",
+          "quality_score": 50,
+          "valuation_score": 60,
+          "trend_score": 80,
+          "risk_score": 60,
+          "total_score": 61.0,
+          "score_details": {}
+        },
+        "created_at": "2026-01-26 20:15:34.074157"
+      },
+      {
+        "fund_code": "001617",
+        "fund_name": "天弘中证电子ETF联接A",
+        "signal": "观望",
+        "confidence": 2,
+        "suggested_amount": null,
+        "suggested_ratio": null,
+        "reasons": [
+          "综合评分61.0分，未达到70分买入标准"
+        ],
+        "risk_warnings": [],
+        "score": {
+          "fund_code": "001617",
+          "fund_name": "天弘中证电子ETF联接A",
+          "quality_score": 50,
+          "valuation_score": 60,
+          "trend_score": 80,
+          "risk_score": 60,
+          "total_score": 61.0,
+          "score_details": {}
+        },
+        "created_at": "2026-01-26 20:15:34.286767"
+      },
+      {
+        "fund_code": "110011",
+        "fund_name": "易方达优质精选混合(QDII)",
+        "signal": "观望",
+        "confidence": 2,
+        "suggested_amount": null,
+        "suggested_ratio": null,
+        "reasons": [
+          "综合评分57.0分，未达到70分买入标准"
+        ],
+        "risk_warnings": [],
+        "score": {
+          "fund_code": "110011",
+          "fund_name": "易方达优质精选混合(QDII)",
+          "quality_score": 50,
+          "valuation_score": 60,
+          "trend_score": 60,
+          "risk_score": 60,
+          "total_score": 57.0,
+          "score_details": {}
+        },
+        "created_at": "2026-01-26 20:15:34.434721"
+      },
+      {
+        "fund_code": "163406",
+        "fund_name": "兴全合润混合A",
+        "signal": "观望",
+        "confidence": 2,
+        "suggested_amount": null,
+        "suggested_ratio": null,
+        "reasons": [
+          "综合评分61.0分，未达到70分买入标准"
+        ],
+        "risk_warnings": [],
+        "score": {
+          "fund_code": "163406",
+          "fund_name": "兴全合润混合A",
+          "quality_score": 50,
+          "valuation_score": 60,
+          "trend_score": 80,
+          "risk_score": 60,
+          "total_score": 61.0,
+          "score_details": {}
+        },
+        "created_at": "2026-01-26 20:15:34.584584"
+      },
+      {
+        "fund_code": "005827",
+        "fund_name": "易方达蓝筹精选混合",
+        "signal": "观望",
+        "confidence": 2,
+        "suggested_amount": null,
+        "suggested_ratio": null,
+        "reasons": [
+          "综合评分57.0分，未达到70分买入标准"
+        ],
+        "risk_warnings": [],
+        "score": {
+          "fund_code": "005827",
+          "fund_name": "易方达蓝筹精选混合",
+          "quality_score": 50,
+          "valuation_score": 60,
+          "trend_score": 60,
+          "risk_score": 60,
+          "total_score": 57.0,
+          "score_details": {}
+        },
+        "created_at": "2026-01-26 20:15:34.737806"
+      },
+      {
+        "fund_code": "519736",
+        "fund_name": "交银新成长混合",
+        "signal": "观望",
+        "confidence": 2,
+        "suggested_amount": null,
+        "suggested_ratio": null,
+        "reasons": [
+          "综合评分57.0分，未达到70分买入标准"
+        ],
+        "risk_warnings": [],
+        "score": {
+          "fund_code": "519736",
+          "fund_name": "交银新成长混合",
+          "quality_score": 50,
+          "valuation_score": 60,
+          "trend_score": 60,
+          "risk_score": 60,
+          "total_score": 57.0,
+          "score_details": {}
+        },
+        "created_at": "2026-01-26 20:15:34.896333"
+      },
+      {
+        "fund_code": "001938",
+        "fund_name": "中欧时代先锋股票A",
+        "signal": "观望",
+        "confidence": 2,
+        "suggested_amount": null,
+        "suggested_ratio": null,
+        "reasons": [
+          "综合评分61.0分，未达到70分买入标准"
+        ],
+        "risk_warnings": [],
+        "score": {
+          "fund_code": "001938",
+          "fund_name": "中欧时代先锋股票A",
+          "quality_score": 50,
+          "valuation_score": 60,
+          "trend_score": 80,
+          "risk_score": 60,
+          "total_score": 61.0,
+          "score_details": {}
+        },
+        "created_at": "2026-01-26 20:15:35.143545"
+      },
+      {
+        "fund_code": "000478",
+        "fund_name": "建信中证500指数增强A",
+        "signal": "观望",
+        "confidence": 2,
+        "suggested_amount": null,
+        "suggested_ratio": null,
+        "reasons": [
+          "综合评分61.0分，未达到70分买入标准"
+        ],
+        "risk_warnings": [],
+        "score": {
+          "fund_code": "000478",
+          "fund_name": "建信中证500指数增强A",
+          "quality_score": 50,
+          "valuation_score": 60,
+          "trend_score": 80,
+          "risk_score": 60,
+          "total_score": 61.0,
+          "score_details": {}
+        },
+        "created_at": "2026-01-26 20:15:35.279969"
+      }
+    ]
+  },
+  "risk_warnings": [],
+  "execution_summary": [
+    "【市场概况】震荡，估值低估"
+  ]
+}
