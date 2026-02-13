@@ -20,6 +20,10 @@ from src.decision import DecisionEngine
 from src.report import report_generator
 from src.notify import notifier, wecom_bot
 
+# 量化选基模块
+from src.workflow.fund_analysis import FundAnalysisWorkflow, fund_analysis_workflow
+from src.storage.fund_storage import fund_storage
+
 
 class InvestmentAdvisor:
     """智能理财助手"""
@@ -350,6 +354,149 @@ class InvestmentAdvisor:
         print(f"建议: {valuation['suggestion']}")
         
         print("="*60 + "\n")
+    
+    # ============ 量化选基功能 ============
+    
+    def run_fund_screening(
+        self, 
+        fund_types: list = None,
+        top_n: int = 20
+    ) -> dict:
+        """运行量化选基分析
+        
+        Args:
+            fund_types: 要分析的基金类型列表
+            top_n: 每类保留前 N 名
+            
+        Returns:
+            分析结果
+        """
+        logger.info("开始量化选基分析...")
+        
+        workflow = FundAnalysisWorkflow()
+        result = workflow.run_full_analysis(
+            fund_types=fund_types,
+            top_n=top_n,
+            use_cache=True,
+            save_results=True
+        )
+        
+        return result
+    
+    def analyze_fund(self, fund_code: str) -> dict:
+        """分析单只基金
+        
+        Args:
+            fund_code: 基金代码
+            
+        Returns:
+            分析结果
+        """
+        workflow = FundAnalysisWorkflow()
+        return workflow.analyze_single_fund(fund_code)
+    
+    def show_top_funds(
+        self, 
+        fund_type: str = 'all',
+        top_n: int = 10
+    ):
+        """显示推荐基金列表
+        
+        Args:
+            fund_type: 基金类型
+            top_n: 显示数量
+        """
+        print("\n" + "="*60)
+        print(f"📊 {fund_type} 基金推荐 TOP {top_n}")
+        print("="*60)
+        
+        workflow = FundAnalysisWorkflow()
+        recommendations = workflow.get_top_recommendations(fund_type, top_n)
+        
+        if not recommendations:
+            print("暂无推荐数据，请先运行 screen 命令进行分析")
+            return
+        
+        for i, rec in enumerate(recommendations, 1):
+            grade = rec.get('grade', '-')
+            score = rec.get('total_score', 0)
+            name = rec.get('fund_name', '')[:12]  # 截断过长的名字
+            code = rec.get('fund_code', '')
+            
+            # 根据评级显示不同颜色
+            grade_icon = {'A': '🌟', 'B': '⭐', 'C': '✨', 'D': '💫', 'E': '✦'}.get(grade, '·')
+            
+            print(f"  {i:2d}. {grade_icon} [{grade}] {score:.1f}分  {name}({code})")
+        
+        print("="*60)
+        print("评分等级: A(≥80) B(≥70) C(≥60) D(≥50) E(<50)")
+        print("="*60 + "\n")
+    
+    def show_fund_analysis(self, fund_code: str):
+        """显示单只基金的详细分析
+        
+        Args:
+            fund_code: 基金代码
+        """
+        print(f"\n正在分析基金 {fund_code}...")
+        
+        result = self.analyze_fund(fund_code)
+        
+        if not result.get('success'):
+            print(f"❌ 分析失败: {result.get('error', '未知错误')}")
+            return
+        
+        print("\n" + "="*60)
+        print(f"📊 基金分析报告: {fund_code}")
+        print("="*60)
+        
+        # 评分信息
+        score = result.get('score', {})
+        total_score = score.get('total_score', 0)
+        
+        rec = result.get('recommendation', {})
+        grade = rec.get('grade', '-')
+        action = rec.get('action', '-')
+        
+        print(f"\n综合评分: {total_score:.1f} / 100  等级: {grade}")
+        print(f"投资建议: {action}")
+        
+        # 分类得分
+        cat_scores = score.get('category_scores', {})
+        if cat_scores:
+            print("\n分类得分:")
+            score_names = {
+                'return': '收益能力',
+                'risk': '风险控制',
+                'risk_adjusted': '风险调整收益',
+                'scale': '规模因子',
+                'manager': '基金经理',
+                'style': '风格稳定性'
+            }
+            for cat, cat_score in cat_scores.items():
+                name = score_names.get(cat, cat)
+                bar = '█' * int(cat_score / 10) + '░' * (10 - int(cat_score / 10))
+                print(f"  {name}: {bar} {cat_score:.1f}")
+        
+        # 预筛选结果
+        prefilter = result.get('prefilter_passed', False)
+        print(f"\n4433筛选: {'✅ 通过' if prefilter else '❌ 未通过'}")
+        
+        # 投资建议
+        reasons = rec.get('reasons', [])
+        risks = rec.get('risks', [])
+        
+        if reasons:
+            print("\n✅ 优势:")
+            for r in reasons:
+                print(f"  · {r}")
+        
+        if risks:
+            print("\n⚠️ 风险提示:")
+            for r in risks:
+                print(f"  · {r}")
+        
+        print("\n" + "="*60 + "\n")
 
 
 def main():
@@ -358,20 +505,31 @@ def main():
     
     print("""
 ╔══════════════════════════════════════════════════════════════╗
-║                    智能理财助手 v1.0                          ║
+║                    智能理财助手 v1.1                          ║
 ║                                                              ║
-║  命令:                                                       ║
+║  基础命令:                                                   ║
 ║    init <金额>      - 初始化投资组合                          ║
 ║    buy <代码> <金额> - 买入基金                               ║
 ║    sell <代码> [比例] - 卖出基金                              ║
 ║    watch <代码>     - 添加到关注列表                          ║
 ║    unwatch <代码>   - 从关注列表移除                          ║
-║    analyze         - 运行每日分析                             ║
-║    notify          - 运行分析并发送企业微信通知                ║
-║    suggest <代码>  - 获取基金建议                             ║
 ║    portfolio       - 查看持仓                                 ║
+║                                                              ║
+║  分析命令:                                                   ║
+║    analyze         - 运行每日分析                             ║
+║    suggest <代码>  - 获取基金建议                             ║
 ║    market          - 查看市场概览                             ║
+║                                                              ║
+║  量化选基（新功能）:                                          ║
+║    screen [类型]   - 运行量化选基分析                          ║
+║    top [类型] [N]  - 查看推荐基金 TOP N                        ║
+║    detail <代码>   - 查看基金详细分析                          ║
+║                                                              ║
+║  通知命令:                                                   ║
+║    notify          - 运行分析并发送企业微信通知                ║
 ║    test_wecom      - 测试企业微信连接                         ║
+║                                                              ║
+║    help            - 显示帮助                                 ║
 ║    quit            - 退出                                     ║
 ╚══════════════════════════════════════════════════════════════╝
     """)
@@ -480,20 +638,72 @@ def main():
             elif action == "market":
                 advisor.show_market_overview()
             
+            # ===== 量化选基命令 =====
+            elif action == "screen":
+                # 运行量化选基分析
+                fund_types = None
+                if len(cmd) > 1:
+                    # 支持指定类型，如 screen 股票型 混合型
+                    fund_types = cmd[1:]
+                
+                print("正在运行量化选基分析，这可能需要几分钟时间...")
+                result = advisor.run_fund_screening(fund_types=fund_types)
+                
+                print(f"\n✅ 分析完成!")
+                print(f"耗时: {result.get('elapsed_seconds', 0):.1f} 秒")
+                
+                stats = result.get('statistics', {})
+                for fund_type, type_stats in stats.items():
+                    print(f"\n{fund_type}:")
+                    print(f"  分析: {type_stats.get('analyzed', 0)} 只")
+                    print(f"  通过筛选: {type_stats.get('passed_prefilter', 0)} 只")
+                
+                print("\n使用 'top [类型]' 命令查看推荐基金列表")
+            
+            elif action == "top":
+                # 查看推荐基金
+                fund_type = cmd[1] if len(cmd) > 1 else 'all'
+                top_n = int(cmd[2]) if len(cmd) > 2 else 10
+                advisor.show_top_funds(fund_type, top_n)
+            
+            elif action == "detail":
+                # 查看基金详细分析
+                if len(cmd) < 2:
+                    print("用法: detail <基金代码>")
+                    continue
+                advisor.show_fund_analysis(cmd[1])
+            
             elif action == "help":
                 print("""
 命令列表:
+
+【基础命令】
   init <金额>       - 初始化投资组合
   buy <代码> <金额> - 买入基金
   sell <代码> [比例] - 卖出基金（比例0-1，默认全部）
   watch <代码>      - 添加到关注列表
   unwatch <代码>    - 从关注列表移除
-  analyze          - 运行每日分析生成报告
-  notify           - 运行分析并发送企业微信通知
-  suggest <代码>   - 获取单只基金的建议
   portfolio        - 查看当前持仓
+
+【分析命令】
+  analyze          - 运行每日分析生成报告
+  suggest <代码>   - 获取单只基金的建议
   market           - 查看市场概览
+
+【量化选基】
+  screen [类型...]  - 运行量化选基分析
+                     类型可选: 股票型 混合型 指数型 债券型
+                     例: screen 股票型 混合型
+  top [类型] [N]   - 查看推荐基金 TOP N（默认10）
+                     例: top 股票型 20
+  detail <代码>    - 查看基金详细分析
+                     例: detail 000001
+
+【通知命令】
+  notify           - 运行分析并发送企业微信通知
   test_wecom       - 测试企业微信机器人连接
+
+【其他】
   help             - 显示帮助
   quit             - 退出程序
                 """)

@@ -26,5 +26,6 @@ logs/
 .DS_Store
 Thumbs.db
 
-# Data files (optional, remove if you want to track them)
-# data/
+# Data files (cache and generated reports)
+data/cache/
+data/reports/

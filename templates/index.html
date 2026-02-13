@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>量化选基系统</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #4f46e5;
+            --success-color: #10b981;
+            --warning-color: #f59e0b;
+            --danger-color: #ef4444;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+        }
+        
+        body {
+            background-color: var(--bg-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+        
+        .navbar {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.4rem;
+        }
+        
+        .stat-card {
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: none;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1);
+        }
+        
+        .stat-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+        }
+        
+        .stat-icon.primary { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .stat-icon.success { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+        .stat-icon.warning { background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); color: white; }
+        .stat-icon.info { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .stat-label {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+        }
+        
+        .card-header {
+            background: transparent;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 20px 24px;
+            font-weight: 600;
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            border-top: none;
+            color: #64748b;
+            font-weight: 500;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .table td {
+            vertical-align: middle;
+            padding: 16px 12px;
+        }
+        
+        .fund-name {
+            font-weight: 600;
+            color: #1e293b;
+        }
+        
+        .fund-code {
+            color: #64748b;
+            font-size: 0.875rem;
+        }
+        
+        .return-positive { color: #ef4444; font-weight: 600; }
+        .return-negative { color: #10b981; font-weight: 600; }
+        
+        .grade-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        
+        .grade-A { background: #dcfce7; color: #166534; }
+        .grade-B { background: #dbeafe; color: #1e40af; }
+        .grade-C { background: #fef9c3; color: #854d0e; }
+        .grade-D { background: #fed7aa; color: #9a3412; }
+        .grade-E { background: #fecaca; color: #991b1b; }
+        
+        .score-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+        
+        .score-bar-fill {
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.5s ease;
+        }
+        
+        .search-box {
+            position: relative;
+        }
+        
+        .search-box input {
+            padding-left: 40px;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            transition: border-color 0.2s;
+        }
+        
+        .search-box input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+        
+        .search-box i {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+            max-height: 400px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .search-results.show { display: block; }
+        
+        .search-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        
+        .search-item:hover {
+            background: #f8fafc;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+        }
+        
+        .category-chart {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        
+        .category-item {
+            background: #f1f5f9;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.875rem;
+        }
+        
+        .category-item span {
+            font-weight: 700;
+            color: var(--primary-color);
+        }
+        
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 40px;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top-color: var(--primary-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .modal-content {
+            border-radius: 20px;
+            border: none;
+        }
+        
+        .modal-header {
+            border-bottom: 1px solid #e2e8f0;
+            padding: 24px;
+        }
+        
+        .modal-body {
+            padding: 24px;
+        }
+        
+        .metric-card {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        
+        .metric-label {
+            font-size: 0.75rem;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .tab-content {
+            padding-top: 20px;
+        }
+        
+        .nav-pills .nav-link {
+            border-radius: 10px;
+            padding: 10px 20px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        
+        .nav-pills .nav-link.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #94a3b8;
+        }
+        
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="#" onclick="location.reload()">
+                <i class="bi bi-graph-up-arrow me-2"></i>量化选基系统
+            </a>
+            <div class="d-flex align-items-center">
+                <div class="search-box me-3 d-none d-md-block" style="width: 300px;">
+                    <i class="bi bi-search"></i>
+                    <input type="text" class="form-control" id="searchInput" placeholder="搜索基金代码或名称...">
+                    <div class="search-results" id="searchResults"></div>
+                </div>
+                <button class="btn btn-light" id="btnRunAnalysis">
+                    <i class="bi bi-play-fill me-1"></i>运行分析
+                </button>
+            </div>
+        </div>
+    </nav>
+    
+    <!-- 加载状态提示 -->
+    <div class="container mb-3" id="loadingAlert">
+        <div class="alert alert-info d-flex align-items-center" role="alert">
+            <div class="spinner me-3" style="width: 24px; height: 24px; border-width: 3px;"></div>
+            <div>正在加载数据，首次加载可能需要 10-15 秒...</div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- 统计卡片 -->
+        <div class="row mb-4" id="statsCards">
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon primary me-3">
+                            <i class="bi bi-collection"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="statTotal">-</div>
+                            <div class="stat-label">全部基金</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon success me-3">
+                            <i class="bi bi-bag-check"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="statPurchasable">-</div>
+                            <div class="stat-label">可购基金</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon warning me-3">
+                            <i class="bi bi-star"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="statStock">-</div>
+                            <div class="stat-label">股票型基金</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
+                <div class="stat-card">
+                    <div class="d-flex align-items-center">
+                        <div class="stat-icon info me-3">
+                            <i class="bi bi-clock-history"></i>
+                        </div>
+                        <div>
+                            <div class="stat-value" id="statUpdateTime" style="font-size: 1rem;">-</div>
+                            <div class="stat-label">更新时间</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 分类统计 -->
+        <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-pie-chart me-2"></i>基金分类统计</span>
+            </div>
+            <div class="card-body">
+                <div class="category-chart" id="categoryChart">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- 业绩排名 -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-trophy me-2"></i>业绩排名 TOP 15</span>
+                        <ul class="nav nav-pills nav-sm" id="rankingTabs">
+                            <li class="nav-item">
+                                <a class="nav-link active py-1 px-3" data-type="stock" href="#">股票</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link py-1 px-3" data-type="mixed" href="#">混合</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link py-1 px-3" data-type="index" href="#">指数</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="rankingTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th>基金</th>
+                                        <th class="text-end">近1年</th>
+                                        <th class="text-end">近3月</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 推荐基金 -->
+            <div class="col-lg-6 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <span><i class="bi bi-hand-thumbs-up me-2"></i>量化推荐基金</span>
+                        <ul class="nav nav-pills nav-sm" id="recommendTabs">
+                            <li class="nav-item">
+                                <a class="nav-link active py-1 px-3" data-type="stock" href="#">股票</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link py-1 px-3" data-type="mixed" href="#">混合</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link py-1 px-3" data-type="index" href="#">指数</a>
+                            </li>
+                        </ul>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-hover" id="recommendTable">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 50px;">#</th>
+                                        <th>基金</th>
+                                        <th class="text-center">评分</th>
+                                        <th class="text-center">等级</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td colspan="4" class="empty-state">
+                                        <i class="bi bi-inbox"></i>
+                                        <p>暂无数据</p>
+                                        <small>点击右上角"运行分析"生成推荐</small>
+                                    </td></tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 基金详情模态框 -->
+    <div class="modal fade" id="fundModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <span id="modalFundName">基金详情</span>
+                        <small class="text-muted ms-2" id="modalFundCode"></small>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="modalBody">
+                    <div class="loading"><div class="spinner"></div></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 分析进度模态框 -->
+    <div class="modal fade" id="analysisModal" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"><i class="bi bi-gear-wide-connected me-2"></i>量化分析进行中</h5>
+                </div>
+                <div class="modal-body text-center py-5">
+                    <div class="spinner mb-3" style="margin: 0 auto;"></div>
+                    <p class="mb-2" id="analysisMessage">正在初始化...</p>
+                    <div class="progress" style="height: 8px;">
+                        <div class="progress-bar" id="analysisProgress" style="width: 0%; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 页面加载时获取数据
+        let loadedCount = 0;
+        function checkAllLoaded() {
+            loadedCount++;
+            if (loadedCount >= 2) {
+                const alert = document.getElementById('loadingAlert');
+                if (alert) alert.style.display = 'none';
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            loadStats();
+            loadRanking('stock');
+            loadRecommendations('stock');
+        });
+
+        // 加载统计数据
+        function loadStats() {
+            fetch('/api/stats', {signal: AbortSignal.timeout(15000)})
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('statTotal').textContent = (data.total || 0).toLocaleString();
+                    document.getElementById('statPurchasable').textContent = (data.purchasable || 0).toLocaleString();
+                    document.getElementById('statStock').textContent = (data.categories?.stock || 0).toLocaleString();
+                    document.getElementById('statUpdateTime').textContent = data.update_time ? data.update_time.split(' ')[1] : '-';
+                    
+                    // 渲染分类
+                    const categoryNames = {
+                        'stock': '股票型', 'mixed': '混合型', 'bond': '债券型',
+                        'index': '指数型', 'money': '货币型', 'qdii': 'QDII', 'fof': 'FOF'
+                    };
+                    let html = '';
+                    if (data.categories) {
+                        for (let [key, value] of Object.entries(data.categories)) {
+                            html += `<div class="category-item">${categoryNames[key] || key}: <span>${value}</span></div>`;
+                        }
+                    }
+                    document.getElementById('categoryChart').innerHTML = html || '<span class="text-muted">暂无数据</span>';
+                    checkAllLoaded();
+                })
+                .catch(e => {
+                    console.error('加载统计失败:', e);
+                    document.getElementById('categoryChart').innerHTML = '<span class="text-muted">加载失败，请刷新重试</span>';
+                    checkAllLoaded();
+                });
+        }
+
+        // 加载排名
+        function loadRanking(type) {
+            const tbody = document.querySelector('#rankingTable tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>';
+            
+            fetch(`/api/ranking?type=${type}&limit=15`, {signal: AbortSignal.timeout(20000)})
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.funds || data.funds.length === 0) {
+                        tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">暂无数据</td></tr>';
+                        return;
+                    }
+                    
+                    let html = '';
+                    data.funds.forEach((fund, i) => {
+                        const return1y = fund.return_1y || 0;
+                        const return3m = fund.return_3m || 0;
+                        const returnClass1y = return1y >= 0 ? 'return-positive' : 'return-negative';
+                        const returnClass3m = return3m >= 0 ? 'return-positive' : 'return-negative';
+                        const fundName = (fund.fund_name || '').replace(/'/g, "\\'");
+                        
+                        html += `
+                            <tr style="cursor:pointer" onclick="showFundDetail('${fund.fund_code}', '${fundName}')">
+                                <td>${i + 1}</td>
+                                <td>
+                                    <div class="fund-name">${fund.fund_name || fund.fund_code}</div>
+                                    <div class="fund-code">${fund.fund_code}</div>
+                                </td>
+                                <td class="text-end ${returnClass1y}">${return1y >= 0 ? '+' : ''}${return1y.toFixed(2)}%</td>
+                                <td class="text-end ${returnClass3m}">${return3m >= 0 ? '+' : ''}${return3m.toFixed(2)}%</td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                    checkAllLoaded();
+                })
+                .catch(e => {
+                    console.error('加载排名失败:', e);
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-muted py-4">加载超时，请刷新重试</td></tr>';
+                    checkAllLoaded();
+                });
+        }
+
+        // 加载推荐基金
+        function loadRecommendations(type) {
+            const tbody = document.querySelector('#recommendTable tbody');
+            tbody.innerHTML = '<tr><td colspan="4" class="loading"><div class="spinner"></div></td></tr>';
+            
+            fetch(`/api/top_funds?type=${type}&limit=15`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.funds || data.funds.length === 0) {
+                        tbody.innerHTML = `<tr><td colspan="4" class="empty-state">
+                            <i class="bi bi-inbox"></i>
+                            <p>暂无数据</p>
+                            <small>点击右上角"运行分析"生成推荐</small>
+                        </td></tr>`;
+                        return;
+                    }
+                    
+                    let html = '';
+                    data.funds.forEach((fund, i) => {
+                        const score = fund.total_score || 0;
+                        const grade = getGrade(score);
+                        const scoreWidth = Math.min(100, score);
+                        const scoreColor = getScoreColor(score);
+                        
+                        html += `
+                            <tr style="cursor:pointer" onclick="showFundDetail('${fund.fund_code}', '${fund.fund_name || ''}')">
+                                <td>${i + 1}</td>
+                                <td>
+                                    <div class="fund-name">${fund.fund_name || fund.fund_code}</div>
+                                    <div class="fund-code">${fund.fund_code}</div>
+                                </td>
+                                <td class="text-center">
+                                    <div class="score-bar" style="width: 80px; margin: 0 auto;">
+                                        <div class="score-bar-fill" style="width: ${scoreWidth}%; background: ${scoreColor};"></div>
+                                    </div>
+                                    <small>${score.toFixed(1)}</small>
+                                </td>
+                                <td class="text-center">
+                                    <span class="grade-badge grade-${grade}">${grade}</span>
+                                </td>
+                            </tr>
+                        `;
+                    });
+                    tbody.innerHTML = html;
+                })
+                .catch(e => {
+                    console.error('加载推荐失败:', e);
+                    tbody.innerHTML = '<tr><td colspan="4" class="text-center text-danger py-4">加载失败</td></tr>';
+                });
+        }
+
+        // 评分等级
+        function getGrade(score) {
+            if (score >= 80) return 'A';
+            if (score >= 70) return 'B';
+            if (score >= 60) return 'C';
+            if (score >= 50) return 'D';
+            return 'E';
+        }
+
+        function getScoreColor(score) {
+            if (score >= 80) return '#10b981';
+            if (score >= 70) return '#3b82f6';
+            if (score >= 60) return '#f59e0b';
+            if (score >= 50) return '#f97316';
+            return '#ef4444';
+        }
+
+        // 显示基金详情
+        function showFundDetail(code, name) {
+            const modal = new bootstrap.Modal(document.getElementById('fundModal'));
+            document.getElementById('modalFundName').textContent = name || '基金详情';
+            document.getElementById('modalFundCode').textContent = code;
+            document.getElementById('modalBody').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+            modal.show();
+            
+            fetch(`/api/analyze/${code}`)
+                .then(r => r.json())
+                .then(data => {
+                    if (!data.success) {
+                        document.getElementById('modalBody').innerHTML = `<div class="alert alert-danger">${data.error || '分析失败'}</div>`;
+                        return;
+                    }
+                    
+                    const factors = data.factors || {};
+                    const score = data.score || {};
+                    const rec = data.recommendation || {};
+                    const totalScore = score.total_score || 0;
+                    const grade = getGrade(totalScore);
+                    
+                    let html = `
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value">${totalScore.toFixed(1)}</div>
+                                    <div class="metric-label">综合评分</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value"><span class="grade-badge grade-${grade}">${grade}</span></div>
+                                    <div class="metric-label">评级</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value ${(factors.return_1y || 0) >= 0 ? 'text-danger' : 'text-success'}">${((factors.return_1y || 0) >= 0 ? '+' : '')}${(factors.return_1y || 0).toFixed(2)}%</div>
+                                    <div class="metric-label">近1年收益</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value">${(factors.max_drawdown || 0).toFixed(2)}%</div>
+                                    <div class="metric-label">最大回撤</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value">${(factors.sharpe_ratio || 0).toFixed(2)}</div>
+                                    <div class="metric-label">夏普比率</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value">${(factors.volatility || 0).toFixed(2)}%</div>
+                                    <div class="metric-label">波动率</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value">${data.prefilter_passed ? '✓' : '✗'}</div>
+                                    <div class="metric-label">4433筛选</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="metric-card">
+                                    <div class="metric-value">${rec.action || '-'}</div>
+                                    <div class="metric-label">建议</div>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // 优势和风险
+                    if (rec.reasons && rec.reasons.length > 0) {
+                        html += '<h6 class="text-success"><i class="bi bi-check-circle me-1"></i>优势</h6><ul class="mb-3">';
+                        rec.reasons.forEach(r => { html += `<li>${r}</li>`; });
+                        html += '</ul>';
+                    }
+                    
+                    if (rec.risks && rec.risks.length > 0) {
+                        html += '<h6 class="text-warning"><i class="bi bi-exclamation-triangle me-1"></i>风险提示</h6><ul>';
+                        rec.risks.forEach(r => { html += `<li>${r}</li>`; });
+                        html += '</ul>';
+                    }
+                    
+                    document.getElementById('modalBody').innerHTML = html;
+                })
+                .catch(e => {
+                    document.getElementById('modalBody').innerHTML = `<div class="alert alert-danger">加载失败: ${e.message}</div>`;
+                });
+        }
+
+        // 排名标签切换
+        document.querySelectorAll('#rankingTabs .nav-link').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('#rankingTabs .nav-link').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                loadRanking(this.dataset.type);
+            });
+        });
+
+        // 推荐标签切换
+        document.querySelectorAll('#recommendTabs .nav-link').forEach(tab => {
+            tab.addEventListener('click', function(e) {
+                e.preventDefault();
+                document.querySelectorAll('#recommendTabs .nav-link').forEach(t => t.classList.remove('active'));
+                this.classList.add('active');
+                loadRecommendations(this.dataset.type);
+            });
+        });
+
+        // 搜索功能
+        let searchTimeout;
+        document.getElementById('searchInput').addEventListener('input', function() {
+            clearTimeout(searchTimeout);
+            const q = this.value.trim();
+            const results = document.getElementById('searchResults');
+            
+            if (q.length < 2) {
+                results.classList.remove('show');
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                fetch(`/api/search?q=${encodeURIComponent(q)}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (!data.funds || data.funds.length === 0) {
+                            results.innerHTML = '<div class="search-item text-muted">未找到匹配的基金</div>';
+                        } else {
+                            let html = '';
+                            data.funds.forEach(fund => {
+                                html += `<div class="search-item" onclick="showFundDetail('${fund.code}', '${fund.name}')">
+                                    <strong>${fund.name}</strong>
+                                    <small class="text-muted ms-2">${fund.code}</small>
+                                    <span class="badge bg-light text-dark float-end">${fund.type}</span>
+                                </div>`;
+                            });
+                            results.innerHTML = html;
+                        }
+                        results.classList.add('show');
+                    });
+            }, 300);
+        });
+
+        // 点击其他地方关闭搜索结果
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-box')) {
+                document.getElementById('searchResults').classList.remove('show');
+            }
+        });
+
+        // 运行分析
+        document.getElementById('btnRunAnalysis').addEventListener('click', function() {
+            const modal = new bootstrap.Modal(document.getElementById('analysisModal'));
+            modal.show();
+            
+            fetch('/api/run_analysis', { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.status === 'already_running') {
+                        document.getElementById('analysisMessage').textContent = '分析正在进行中...';
+                    }
+                    // 开始轮询状态
+                    pollAnalysisStatus();
+                });
+        });
+
+        function pollAnalysisStatus() {
+            fetch('/api/analysis_status')
+                .then(r => r.json())
+                .then(data => {
+                    document.getElementById('analysisMessage').textContent = data.message || '处理中...';
+                    document.getElementById('analysisProgress').style.width = data.progress + '%';
+                    
+                    if (data.running) {
+                        setTimeout(pollAnalysisStatus, 2000);
+                    } else {
+                        setTimeout(() => {
+                            bootstrap.Modal.getInstance(document.getElementById('analysisModal')).hide();
+                            // 刷新数据
+                            loadRecommendations('stock');
+                            if (data.last_result) {
+                                alert(`分析完成！耗时 ${data.last_result.elapsed_seconds.toFixed(1)} 秒`);
+                            }
+                        }, 1000);
+                    }
+                })
+                .catch(e => {
+                    setTimeout(pollAnalysisStatus, 3000);
+                });
+        }
+    </script>
+</body>
+</html>

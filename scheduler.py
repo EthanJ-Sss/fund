@@ -21,6 +21,10 @@ except ImportError:
 from config.settings import settings
 from main import InvestmentAdvisor
 
+# 量化选基模块
+from src.workflow.fund_analysis import FundAnalysisWorkflow
+from src.storage.fund_storage import fund_storage
+
 
 def setup_logging():
     """配置日志"""
@@ -101,6 +105,77 @@ def market_check():
         logger.error(f"盘中检查失败: {e}")
 
 
+def fund_screening():
+    """量化选基分析（每周日 20:00）"""
+    logger.info("执行量化选基分析...")
+    try:
+        workflow = FundAnalysisWorkflow()
+        
+        # 运行完整分析
+        result = workflow.run_full_analysis(
+            fund_types=['股票型', '混合型', '指数型', '债券型'],
+            top_n=50,
+            use_cache=False,  # 强制刷新
+            save_results=True
+        )
+        
+        logger.info(f"量化选基分析完成，耗时: {result.get('elapsed_seconds', 0):.1f} 秒")
+        
+        # 发送通知
+        try:
+            from src.notify import wecom_bot
+            
+            if wecom_bot.enabled:
+                # 构建推荐摘要
+                summary_lines = ["📊 本周基金筛选结果\n"]
+                
+                for fund_type, top_funds in result.get('top_funds', {}).items():
+                    if top_funds:
+                        summary_lines.append(f"\n【{fund_type}】TOP 5:")
+                        for fund in top_funds[:5]:
+                            name = fund.get('fund_name', '')[:10]
+                            code = fund.get('fund_code', '')
+                            score = fund.get('total_score', 0)
+                            summary_lines.append(f"  {name}({code}) {score:.1f}分")
+                
+                summary = "\n".join(summary_lines)
+                wecom_bot.send_text(summary)
+                logger.info("量化选基结果已发送到企业微信")
+        except Exception as e:
+            logger.warning(f"发送通知失败: {e}")
+        
+    except Exception as e:
+        logger.error(f"量化选基分析失败: {e}")
+
+
+def daily_fund_update():
+    """每日基金数据更新（收盘后 16:00）"""
+    logger.info("执行每日基金数据更新...")
+    try:
+        # 清理过期缓存
+        fund_storage.clear_cache(older_than_days=7)
+        
+        # 更新推荐基金的最新数据
+        workflow = FundAnalysisWorkflow()
+        
+        # 只更新评分 TOP 基金的数据
+        for fund_type in ['股票型', '混合型', '指数型', '债券型']:
+            top_funds = fund_storage.get_top_funds(fund_type, top_n=20)
+            if top_funds.empty:
+                continue
+            
+            logger.info(f"更新 {fund_type} TOP 20 基金数据...")
+            for fund_code in top_funds['fund_code'].tolist():
+                try:
+                    workflow._get_fund_factors(fund_code, use_cache=False)
+                except Exception as e:
+                    logger.debug(f"更新基金 {fund_code} 失败: {e}")
+        
+        logger.info("每日基金数据更新完成")
+    except Exception as e:
+        logger.error(f"每日基金数据更新失败: {e}")
+
+
 def run_scheduler():
     """运行定时调度器"""
     if not HAS_SCHEDULER:
@@ -160,6 +235,30 @@ def run_scheduler():
         name='每日邮件报告'
     )
     
+    # 每日基金数据更新 - 每个交易日16:00
+    scheduler.add_job(
+        daily_fund_update,
+        CronTrigger(
+            day_of_week='mon-fri',
+            hour=16,
+            minute=0
+        ),
+        id='daily_fund_update',
+        name='每日基金数据更新'
+    )
+    
+    # 量化选基分析 - 每周日20:00
+    scheduler.add_job(
+        fund_screening,
+        CronTrigger(
+            day_of_week='sun',
+            hour=20,
+            minute=0
+        ),
+        id='fund_screening',
+        name='量化选基分析'
+    )
+    
     logger.info("="*60)
     logger.info("智能理财助手 - 定时任务调度器已启动")
     logger.info("="*60)
@@ -217,6 +316,13 @@ def send_test_email():
         traceback.print_exc()
 
 
+def run_fund_screening():
+    """立即执行量化选基分析"""
+    setup_logging()
+    logger.info("手动执行量化选基分析...")
+    fund_screening()
+
+
 if __name__ == "__main__":
     import argparse
     
@@ -236,6 +342,16 @@ if __name__ == "__main__":
         action='store_true',
         help='立即发送一封测试邮件'
     )
+    parser.add_argument(
+        '--screen',
+        action='store_true',
+        help='立即执行量化选基分析'
+    )
+    parser.add_argument(
+        '--update',
+        action='store_true',
+        help='立即更新基金数据'
+    )
     
     args = parser.parse_args()
     
@@ -246,5 +362,10 @@ if __name__ == "__main__":
     elif args.check:
         setup_logging()
         market_check()
+    elif args.screen:
+        run_fund_screening()
+    elif args.update:
+        setup_logging()
+        daily_fund_update()
     else:
         run_scheduler()
