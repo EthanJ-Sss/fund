@@ -205,8 +205,8 @@ class Enhanced4433Rule(PreFilterRule):
         if self.strict:
             passed = len(failed_rules) == 0
         else:
-            # 宽松模式：通过至少 3 项即可
-            passed = len(passed_rules) >= 3
+            # 宽松模式：通过至少 2 项即可
+            passed = len(passed_rules) >= 2
         
         reason = f"通过: {', '.join(passed_rules)}" if passed_rules else ""
         if failed_rules:
@@ -296,9 +296,9 @@ class PreFilter:
                 if passed:
                     optional_passed += 1
         
-        # 必须规则全通过，可选规则至少通过一半
+        # 必须规则全通过，可选规则至少通过 1/3
         final_passed = required_passed and (
-            optional_total == 0 or optional_passed >= optional_total / 2
+            optional_total == 0 or optional_passed >= max(1, optional_total / 3)
         )
         
         if return_details:

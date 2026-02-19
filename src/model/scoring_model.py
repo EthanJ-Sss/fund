@@ -68,15 +68,17 @@ class ScoringConfig:
     ])
     
     risk_factors: List[FactorWeight] = field(default_factory=lambda: [
-        FactorWeight('volatility', 0.4, False, 0, 50),  # 波动率越小越好
-        FactorWeight('max_drawdown', 0.4, False, -50, 0),  # 回撤越小越好
+        FactorWeight('volatility', 0.3, False, 0, 50),  # 波动率越小越好
+        FactorWeight('max_drawdown', 0.3, False, -50, 0),  # 回撤越小越好
         FactorWeight('downside_volatility', 0.2, False, 0, 30),
+        FactorWeight('concentration', 0.2, False, 0, 100), # 集中度越低越分散
     ])
     
     risk_adjusted_factors: List[FactorWeight] = field(default_factory=lambda: [
-        FactorWeight('sharpe_ratio', 0.4, True, -1, 3),
-        FactorWeight('sortino_ratio', 0.3, True, -1, 4),
-        FactorWeight('calmar_ratio', 0.3, True, -1, 3),
+        FactorWeight('sharpe_ratio', 0.3, True, -1, 3),
+        FactorWeight('sortino_ratio', 0.2, True, -1, 4),
+        FactorWeight('calmar_ratio', 0.2, True, -1, 3),
+        FactorWeight('alpha', 0.3, True, -20, 20), # Alpha 越高越好
     ])
     
     scale_factors: List[FactorWeight] = field(default_factory=lambda: [

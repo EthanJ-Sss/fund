@@ -4,6 +4,7 @@ AKShare 基金数据采集器
 使用 AKShare 库获取基金数据，作为主要数据源
 """
 import time
+import threading
 from datetime import datetime
 from typing import Dict, List, Optional
 
@@ -20,12 +21,6 @@ except ImportError:
 class AKShareCollector:
     """
     AKShare 基金数据采集器
-    
-    主要接口：
-    - fund_name_em: 所有基金列表
-    - fund_info_index_em: 指数基金详情
-    - fund_open_fund_info_em: 开放式基金历史净值
-    - fund_portfolio_hold_em: 基金持仓数据
     """
     
     def __init__(self, request_interval: float = 0.5):
@@ -40,13 +35,15 @@ class AKShareCollector:
         
         self.request_interval = request_interval
         self._last_request_time = 0
+        self._lock = threading.Lock()
     
     def _rate_limit(self):
-        """请求限流"""
-        elapsed = time.time() - self._last_request_time
-        if elapsed < self.request_interval:
-            time.sleep(self.request_interval - elapsed)
-        self._last_request_time = time.time()
+        """请求限流（线程安全）"""
+        with self._lock:
+            elapsed = time.time() - self._last_request_time
+            if elapsed < self.request_interval:
+                time.sleep(self.request_interval - elapsed)
+            self._last_request_time = time.time()
     
     def get_all_funds(self) -> pd.DataFrame:
         """
@@ -283,6 +280,41 @@ class AKShareCollector:
             return df
         except Exception as e:
             logger.error(f"获取 {fund_type} 基金排行失败: {e}")
+            return pd.DataFrame()
+            
+    def get_index_daily(self, symbol: str = "sh000300", start_date: str = None, end_date: str = None) -> pd.DataFrame:
+        """
+        获取指数日行情数据
+        
+        Args:
+            symbol: 指数代码，如 sh000300 (沪深300)
+            start_date: 开始日期 YYYYMMDD
+            end_date: 结束日期 YYYYMMDD
+            
+        Returns:
+            DataFrame with columns: date, open, close, high, low, volume
+        """
+        self._rate_limit()
+        try:
+            df = ak.stock_zh_index_daily(symbol=symbol)
+            
+            # 标准化列名
+            if not df.empty:
+                # akshare 返回已经是 date, open, high, low, close, volume
+                # 转换日期格式
+                df['date'] = pd.to_datetime(df['date'])
+                
+                # 筛选日期
+                if start_date:
+                    df = df[df['date'] >= pd.to_datetime(start_date)]
+                if end_date:
+                    df = df[df['date'] <= pd.to_datetime(end_date)]
+                    
+                df = df.sort_values('date')
+            
+            return df
+        except Exception as e:
+            logger.error(f"获取指数数据失败 {symbol}: {e}")
             return pd.DataFrame()
 
 

@@ -6,6 +6,7 @@
 import json
 import re
 import time
+import threading
 from typing import Dict, List, Optional
 
 import pandas as pd
@@ -16,12 +17,6 @@ from loguru import logger
 class EastMoneyCollector:
     """
     天天基金网数据采集器
-    
-    主要接口：
-    - 基金列表: fund.eastmoney.com/js/fundcode_search.js
-    - 实时估值: fundgz.1234567.com.cn/js/{code}.js
-    - 详细数据: fund.eastmoney.com/pingzhongdata/{code}.js
-    - 业绩排名: fund.eastmoney.com/data/rankhandler.aspx
     """
     
     BASE_HEADERS = {
@@ -40,15 +35,17 @@ class EastMoneyCollector:
         """
         self.request_interval = request_interval
         self._last_request_time = 0
+        self._lock = threading.Lock()  # 添加线程锁
         self.session = requests.Session()
         self.session.headers.update(self.BASE_HEADERS)
     
     def _rate_limit(self):
-        """请求限流"""
-        elapsed = time.time() - self._last_request_time
-        if elapsed < self.request_interval:
-            time.sleep(self.request_interval - elapsed)
-        self._last_request_time = time.time()
+        """请求限流（线程安全）"""
+        with self._lock:
+            elapsed = time.time() - self._last_request_time
+            if elapsed < self.request_interval:
+                time.sleep(self.request_interval - elapsed)
+            self._last_request_time = time.time()
     
     def get_fund_list(self) -> List[Dict]:
         """
@@ -193,13 +190,24 @@ class EastMoneyCollector:
                     pass
             
             # 基金经理信息
-            manager_pattern = r'var Data_currentFundManager=(\[.*?\]);'
+            manager_pattern = r'var Data_currentFundManager\s*=\s*(\[.*?\]);'
             match = re.search(manager_pattern, content, re.S)
             if match:
                 try:
                     data['managers'] = json.loads(match.group(1))
                 except:
                     pass
+            else:
+                # 尝试更宽松的匹配
+                manager_pattern = r'Data_currentFundManager\s*=\s*(\[.*?\]);'
+                match = re.search(manager_pattern, content, re.S)
+                if match:
+                    try:
+                        data['managers'] = json.loads(match.group(1))
+                    except:
+                        pass
+                else:
+                    logger.debug(f"未匹配到 Manager 数据")
             
             return data
         except Exception as e:

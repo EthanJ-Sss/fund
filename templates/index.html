@@ -388,8 +388,21 @@
             </div>
         </div>
 
-        <!-- 分类统计 -->
-        <div class="card mb-4">
+        <!-- 主导航 -->
+        <ul class="nav nav-pills mb-4" id="mainTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="screening-tab" data-bs-toggle="pill" data-bs-target="#pills-screening" type="button" role="tab">基金筛选</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="portfolio-tab" data-bs-toggle="pill" data-bs-target="#pills-portfolio" type="button" role="tab" onclick="loadPortfolio()">投资组合建议</button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="mainTabContent">
+            <!-- 基金筛选页 -->
+            <div class="tab-pane fade show active" id="pills-screening" role="tabpanel">
+                <!-- 分类统计 -->
+                <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <span><i class="bi bi-pie-chart me-2"></i>基金分类统计</span>
             </div>
@@ -479,6 +492,50 @@
                 </div>
             </div>
         </div>
+            </div>
+            
+            <!-- 投资组合页 -->
+            <div class="tab-pane fade" id="pills-portfolio" role="tabpanel">
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-body p-4">
+                                <h4 class="text-primary mb-4"><i class="bi bi-speedometer2 me-2"></i>智能投顾建议</h4>
+                                
+                                <div class="row align-items-center mb-4">
+                                    <div class="col-md-8">
+                                        <div class="d-flex align-items-center mb-3">
+                                            <span class="badge bg-primary me-2" id="marketStatus">分析中</span>
+                                            <h5 class="mb-0" id="marketSignal">正在获取市场数据...</h5>
+                                        </div>
+                                        <p class="text-muted" id="strategyDesc">根据最新的市场估值数据，为您生成个性化的资产配置方案。</p>
+                                    </div>
+                                    <div class="col-md-4 text-center">
+                                        <div class="metric-card bg-light">
+                                            <div class="metric-value text-primary" id="pePercentile">-</div>
+                                            <div class="metric-label">沪深300 PE百分位</div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <h6 class="text-uppercase text-muted mb-3" style="font-size: 0.75rem; letter-spacing: 1px;">建议资产配置</h6>
+                                <div class="progress mb-2" style="height: 30px; border-radius: 15px; font-size: 14px;">
+                                     <div class="progress-bar bg-primary" role="progressbar" style="width: 50%" id="equityBar">权益类 50%</div>
+                                     <div class="progress-bar bg-success" role="progressbar" style="width: 50%" id="bondBar">固收类 50%</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="portfolioList" class="row">
+                    <div class="col-12 text-center py-5">
+                        <div class="spinner" style="width: 3rem; height: 3rem;"></div>
+                        <p class="mt-3 text-muted">正在加载数据...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- 基金详情模态框 -->
@@ -500,11 +557,11 @@
     </div>
 
     <!-- 分析进度模态框 -->
-    <div class="modal fade" id="analysisModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal fade" id="analysisModal" tabindex="-1" aria-labelledby="analysisModalLabel" data-bs-backdrop="static">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title"><i class="bi bi-gear-wide-connected me-2"></i>量化分析进行中</h5>
+                    <h5 class="modal-title" id="analysisModalLabel"><i class="bi bi-gear-wide-connected me-2"></i>量化分析进行中</h5>
                 </div>
                 <div class="modal-body text-center py-5">
                     <div class="spinner mb-3" style="margin: 0 auto;"></div>
@@ -521,12 +578,100 @@
     <script>
         // 页面加载时获取数据
         let loadedCount = 0;
+        let portfolioLoaded = false;
+        
         function checkAllLoaded() {
             loadedCount++;
             if (loadedCount >= 2) {
                 const alert = document.getElementById('loadingAlert');
                 if (alert) alert.style.display = 'none';
             }
+        }
+        
+        function loadPortfolio() {
+            if (portfolioLoaded) return;
+            
+            const listContainer = document.getElementById('portfolioList');
+            listContainer.innerHTML = '<div class="col-12 text-center py-5"><div class="spinner"></div><p class="mt-2 text-muted">正在生成专属组合建议...</p></div>';
+            
+            fetch('/api/portfolio?risk=balanced')
+                .then(r => r.json())
+                .then(data => {
+                    if (!data || !data.portfolio || data.portfolio.length === 0) {
+                        listContainer.innerHTML = '<div class="col-12 text-center text-muted py-5"><i class="bi bi-inbox fs-1"></i><p class="mt-3">暂无组合数据，请先运行分析</p></div>';
+                        return;
+                    }
+                    
+                    // 渲染市场状态
+                    const status = data.market_status || {};
+                    const alloc = data.allocation_plan || {};
+                    
+                    document.getElementById('marketStatus').textContent = status.status || '未知';
+                    document.getElementById('marketSignal').textContent = status.signal || '-';
+                    document.getElementById('pePercentile').textContent = (status.pe_percentile || 0).toFixed(1) + '%';
+                    document.getElementById('strategyDesc').textContent = data.strategy_description || '';
+                    
+                    // 渲染配置条
+                    const equityPct = (alloc.equity_ratio || 0.5) * 100;
+                    const bondPct = (alloc.bond_ratio || 0.5) * 100;
+                    
+                    const eqBar = document.getElementById('equityBar');
+                    const bdBar = document.getElementById('bondBar');
+                    
+                    eqBar.style.width = equityPct + '%';
+                    eqBar.textContent = `权益类 ${equityPct.toFixed(0)}%`;
+                    eqBar.setAttribute('aria-valuenow', equityPct);
+                    
+                    bdBar.style.width = bondPct + '%';
+                    bdBar.textContent = `固收类 ${bondPct.toFixed(0)}%`;
+                    bdBar.setAttribute('aria-valuenow', bondPct);
+                    
+                    // 渲染列表
+                    let html = '';
+                    
+                    // 分组渲染：核心、卫星、防守
+                    const groups = {
+                        '核心': { icon: 'bi-bullseye', color: 'primary' },
+                        '卫星': { icon: 'bi-rocket-takeoff', color: 'info' },
+                        '防守': { icon: 'bi-shield-check', color: 'success' }
+                    };
+                    
+                    data.portfolio.forEach(fund => {
+                        const role = fund.role || '其他';
+                        const style = groups[role] || { icon: 'bi-circle', color: 'secondary' };
+                        const name = (fund.fund_name || '').replace(/'/g, "\\'");
+                        
+                        html += `
+                        <div class="col-md-4 mb-4">
+                            <div class="card h-100 border-0 shadow-sm hover-card">
+                                <div class="card-header bg-transparent border-0 pt-4 pb-0">
+                                    <span class="badge bg-${style.color} mb-2"><i class="bi ${style.icon} me-1"></i>${role}配置</span>
+                                    <span class="float-end text-muted small fw-bold">建议仓位 ${(fund.weight * 100).toFixed(0)}%</span>
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title text-truncate" title="${fund.fund_name}">${fund.fund_name}</h5>
+                                    <p class="card-subtitle text-muted mb-3 font-monospace">${fund.fund_code}</p>
+                                    <div class="alert alert-light border small text-muted mb-0">
+                                        <i class="bi bi-info-circle me-1"></i>${fund.reason}
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 pb-4 pt-0">
+                                    <button class="btn btn-outline-primary btn-sm w-100 rounded-pill" onclick="showFundDetail('${fund.fund_code}', '${name}')">
+                                        查看详情
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    });
+                    
+                    listContainer.innerHTML = html;
+                    portfolioLoaded = true;
+                })
+                .catch(e => {
+                    console.error('加载组合失败:', e);
+                    listContainer.innerHTML = '<div class="col-12 text-center text-danger py-5">加载失败，请稍后重试</div>';
+                });
         }
         
         document.addEventListener('DOMContentLoaded', function() {
@@ -542,18 +687,14 @@
                 .then(data => {
                     document.getElementById('statTotal').textContent = (data.total || 0).toLocaleString();
                     document.getElementById('statPurchasable').textContent = (data.purchasable || 0).toLocaleString();
-                    document.getElementById('statStock').textContent = (data.categories?.stock || 0).toLocaleString();
+                    document.getElementById('statStock').textContent = (data.categories?.['股票型'] || 0).toLocaleString();
                     document.getElementById('statUpdateTime').textContent = data.update_time ? data.update_time.split(' ')[1] : '-';
                     
                     // 渲染分类
-                    const categoryNames = {
-                        'stock': '股票型', 'mixed': '混合型', 'bond': '债券型',
-                        'index': '指数型', 'money': '货币型', 'qdii': 'QDII', 'fof': 'FOF'
-                    };
                     let html = '';
                     if (data.categories) {
                         for (let [key, value] of Object.entries(data.categories)) {
-                            html += `<div class="category-item">${categoryNames[key] || key}: <span>${value}</span></div>`;
+                            html += `<div class="category-item">${key}: <span>${value}</span></div>`;
                         }
                     }
                     document.getElementById('categoryChart').innerHTML = html || '<span class="text-muted">暂无数据</span>';
@@ -863,7 +1004,12 @@
                         setTimeout(pollAnalysisStatus, 2000);
                     } else {
                         setTimeout(() => {
-                            bootstrap.Modal.getInstance(document.getElementById('analysisModal')).hide();
+                            const modalEl = document.getElementById('analysisModal');
+                            // 先移除焦点，避免 aria-hidden 警告
+                            if (document.activeElement && modalEl.contains(document.activeElement)) {
+                                document.activeElement.blur();
+                            }
+                            bootstrap.Modal.getInstance(modalEl).hide();
                             // 刷新数据
                             loadRecommendations('stock');
                             if (data.last_result) {

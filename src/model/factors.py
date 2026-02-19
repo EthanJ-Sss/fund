@@ -502,6 +502,58 @@ class FactorCalculator:
         # 综合考虑胜率和稳定性
         return stability * 0.7 + win_rate * 100 * 0.3
     
+    # ============ 持仓集中度因子 ============
+    
+    def calculate_concentration_factors(
+        self,
+        holdings: pd.DataFrame
+    ) -> Dict[str, float]:
+        """
+        计算持仓集中度因子
+        
+        Args:
+            holdings: 持仓数据 DataFrame
+            
+        Returns:
+            集中度因子字典
+        """
+        factors = {
+            'concentration': 0.0
+        }
+        
+        if holdings is None or holdings.empty:
+            return factors
+            
+        # 尝试计算前十大持仓占比
+        try:
+            # 查找占比列
+            ratio_col = None
+            for col in ['占净值比例', 'ratio', 'percent']:
+                if col in holdings.columns:
+                    ratio_col = col
+                    break
+            
+            if ratio_col:
+                # 处理百分比字符串
+                def parse_ratio(x):
+                    if isinstance(x, (int, float)):
+                        return float(x)
+                    if isinstance(x, str):
+                        return float(x.replace('%', ''))
+                    return 0.0
+                
+                ratios = holdings[ratio_col].apply(parse_ratio)
+                
+                # 计算前10大持仓占比之和
+                # 注意：如果数据已经是前10大持仓，直接求和即可
+                # 如果是全部持仓，取前10
+                top10_concentration = ratios.nlargest(10).sum()
+                factors['concentration'] = top10_concentration
+        except Exception as e:
+            logger.debug(f"计算持仓集中度失败: {e}")
+            
+        return factors
+
     # ============ 综合因子计算 ============
     
     def calculate_all_factors(
@@ -510,7 +562,8 @@ class FactorCalculator:
         benchmark_data: pd.DataFrame = None,
         fund_info: Dict = None,
         peer_returns: Dict[str, List[float]] = None,
-        holdings_history: List[Dict] = None
+        holdings_history: List[Dict] = None,
+        current_holdings: pd.DataFrame = None
     ) -> Dict[str, float]:
         """
         计算所有因子
@@ -521,6 +574,7 @@ class FactorCalculator:
             fund_info: 基金基本信息
             peer_returns: 同类基金收益率
             holdings_history: 持仓历史
+            current_holdings: 当前持仓数据
             
         Returns:
             所有因子的字典
@@ -564,6 +618,11 @@ class FactorCalculator:
             holdings_history, nav_data, benchmark_data
         )
         all_factors.update(style_factors)
+        
+        # 持仓集中度因子
+        if current_holdings is not None:
+            concentration_factors = self.calculate_concentration_factors(current_holdings)
+            all_factors.update(concentration_factors)
         
         return all_factors
 

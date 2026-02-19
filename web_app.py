@@ -223,6 +223,20 @@ def api_top_funds():
         return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/portfolio')
+def api_portfolio():
+    """获取投资组合建议"""
+    risk_level = request.args.get('risk', 'balanced')
+    try:
+        workflow = get_workflow()
+        result = workflow.get_portfolio_recommendation(risk_level)
+        result = clean_nan(result)
+        return jsonify(result)
+    except Exception as e:
+        logger.error(f"获取投资组合失败: {e}")
+        return jsonify({'error': str(e), 'success': False}), 500
+
+
 @app.route('/api/run_analysis', methods=['POST'])
 def api_run_analysis():
     """运行量化选基分析"""
@@ -235,20 +249,28 @@ def api_run_analysis():
         global analysis_status
         try:
             analysis_status['running'] = True
-            analysis_status['progress'] = 10
-            analysis_status['message'] = '正在获取基金列表...'
+            analysis_status['progress'] = 5
+            analysis_status['message'] = '正在初始化工作流...'
+            logger.info("="*50)
+            logger.info("[Web] 开始运行分析任务")
             
             workflow = get_workflow()
+            logger.info("[Web] 工作流初始化完成")
             
-            analysis_status['progress'] = 30
-            analysis_status['message'] = '正在分析基金数据...'
+            analysis_status['progress'] = 10
+            analysis_status['message'] = '正在获取基金列表...'
+            logger.info("[Web] 准备调用 run_full_analysis")
             
             result = workflow.run_full_analysis(
                 fund_types=['股票型', '混合型', '指数型'],
                 top_n=30,
                 use_cache=True,
-                save_results=True
+                save_results=True,
+                limit=30
             )
+            
+            logger.info(f"[Web] run_full_analysis 返回，统计: {result.get('statistics', {})}")
+            logger.info(f"[Web] 耗时: {result.get('elapsed_seconds', 0):.1f} 秒")
             
             analysis_status['progress'] = 100
             analysis_status['message'] = '分析完成!'
@@ -257,10 +279,15 @@ def api_run_analysis():
                 'statistics': result.get('statistics', {}),
                 'complete_time': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
             }
+            logger.info("[Web] 分析任务完成")
+            logger.info("="*50)
             
         except Exception as e:
+            import traceback
+            tb = traceback.format_exc()
             analysis_status['message'] = f'分析失败: {str(e)}'
-            logger.error(f"分析失败: {e}")
+            logger.error(f"[Web] 分析失败: {e}")
+            logger.error(f"[Web] 完整堆栈:\n{tb}")
         finally:
             analysis_status['running'] = False
     

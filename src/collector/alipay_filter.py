@@ -124,13 +124,13 @@ class AlipayFundFilter:
             return {'all': df}
         
         categories = {
-            'stock': df[df['type'].str.contains('股票', na=False)],
-            'mixed': df[df['type'].str.contains('混合', na=False)],
-            'bond': df[df['type'].str.contains('债券', na=False)],
-            'index': df[df['type'].str.contains('指数|联接', na=False)],
-            'money': df[df['type'].str.contains('货币', na=False)],
-            'qdii': df[df['type'].str.contains('QDII', na=False)],
-            'fof': df[df['type'].str.contains('FOF', na=False)],
+            '股票型': df[df['type'].str.contains('股票', na=False)],
+            '混合型': df[df['type'].str.contains('混合', na=False)],
+            '债券型': df[df['type'].str.contains('债券', na=False)],
+            '指数型': df[df['type'].str.contains('指数|联接', na=False)],
+            '货币型': df[df['type'].str.contains('货币', na=False)],
+            'QDII': df[df['type'].str.contains('QDII', na=False)],
+            'FOF': df[df['type'].str.contains('FOF', na=False)],
         }
         
         return categories
